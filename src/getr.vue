@@ -124,6 +124,11 @@ export default {
       };
     },
     getKL() {
+      if (this.market == "11") {
+        this.getUSData();
+        return;
+      }
+
       this.errMsg = "";
       let websocket = new ftWebsocket();
       //参数1指定监听地址
@@ -184,9 +189,23 @@ export default {
         }
       };
     },
-    convertData(rows,datas ,res) {
+    getUSData() {
       this.$ajax
-        .post("http://coin.wztctech.com/api", { rows: rows })
+        .post(`http://coin.wztctech.com/api?type=1&code=${this.code}`)
+        .then((resp) => {
+          console.log(resp.data.data);
+          let datas = resp.data.data.stocks
+          datas.extra = resp.data.data;
+          this.drawChart(datas, null);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+
+    },
+    convertData(rows, datas, res) {
+      this.$ajax
+        .post(`http://coin.wztctech.com/api?type=2&code=${this.code}`, { rows: rows })
         .then((resp) => {
           console.log(resp.data.data.macd);
           datas.extra = resp.data.data;
@@ -224,7 +243,7 @@ export default {
         legend: {
           bottom: 10,
           left: "center",
-          data: [res.s2c.security.code, "MA5", "MA10", "MA20", "MA30"],
+          data: [this.code, "MA5", "MA10", "MA20", "MA30"],
         },
         tooltip: {
           trigger: "axis",
@@ -398,7 +417,7 @@ export default {
         ],
         series: [
           {
-            name: res.s2c.security.code,
+            name: this.code,
             type: "candlestick",
             data: data.values,
             itemStyle: {
