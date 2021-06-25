@@ -8,6 +8,6 @@ export default new Vuex.Store({
     addr: "127.0.0.1",
     port: 33333,
     enable_ssl: false,
-    key: "50ae04d99ece06a3",
+    key: "8603ac8dd3d359e5",
   },
 })

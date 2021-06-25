@@ -19,7 +19,7 @@
     <span id="err">{{ errMsg }}</span>
     <div id="output">
       <div id="content">
-        <div id="myChart" style="width: 80vw; height: 40vw"></div>
+        <div id="myChart" style="width: 80vw; height: 60vw"></div>
         <pre><code class="language-js" v-html="get_message"></code></pre>
       </div>
     </div>
@@ -194,18 +194,19 @@ export default {
         .post(`http://coin.wztctech.com/api?type=1&code=${this.code}`)
         .then((resp) => {
           console.log(resp.data.data);
-          let datas = resp.data.data.stocks
+          let datas = resp.data.data.stocks;
           datas.extra = resp.data.data;
           this.drawChart(datas, null);
         })
         .catch((err) => {
           console.log(err);
         });
-
     },
     convertData(rows, datas, res) {
       this.$ajax
-        .post(`http://coin.wztctech.com/api?type=2&code=${this.code}`, { rows: rows })
+        .post(`http://coin.wztctech.com/api?type=2&code=${this.code}`, {
+          rows: rows,
+        })
         .then((resp) => {
           console.log(resp.data.data.macd);
           datas.extra = resp.data.data;
@@ -230,20 +231,73 @@ export default {
           console.log(err);
         });
     },
+    getMark(data) {
+      let buy_lvl1 = data.extra.rik.buy_lvl1;
+      let sell_lvl1 = data.extra.rik.sell_lvl1;
+      let times = data.times;
+      let values = data.values;
+      let markData = [];
+      for (let i = 0; i < buy_lvl1.length; i++) {
+        if (buy_lvl1[i] == true) {
+          markData.push({
+            name: "买点",
+            coord: [times[i], "" + values[i][1] * 1.01],
+            value: "买",
+            itemStyle: {
+              color: "red",
+            },
+          });
+        }
+
+        
+        if (sell_lvl1[i] == true) {
+          markData.push({
+            name: "卖点",
+            coord: [times[i], "" + values[i][1] * 1.01],
+            value: "卖",
+            itemStyle: {
+              color: "green",
+            },
+          });
+        }
+      }
+      return markData;
+    },
 
     drawChart(data, res) {
       // 基于准备好的dom，初始化echarts实例
       console.log(data);
       let myChart = this.$echarts.init(document.getElementById("myChart"), "");
-      var macd = this.calcMACD(12, 26, 9, data.values, 1);
-      console.log(macd);
-      macd = data.extra.macd;
+      let macd = data.extra.macd;
+      let rsi1 = data.extra.rsi.rsi1;
+      let rsi2 = data.extra.rsi.rsi2;
+      let rsi3 = data.extra.rsi.rsi3;
+      let k = data.extra.kdj.k;
+      let d = data.extra.kdj.d;
+      let j = data.extra.kdj.j;
+
+      let markData = this.getMark(data);
+
       let option = {
         animation: false,
         legend: {
           bottom: 10,
           left: "center",
-          data: [this.code, "MA5", "MA10", "MA20", "MA30"],
+          data: [
+            this.code,
+            "MA5",
+            "MA10",
+            "MA20",
+            "MA30",
+            "Volume",
+            "MACD",
+            "RSI1",
+            "RSI2",
+            "RSI3",
+            "K",
+            "D",
+            "J",
+          ],
         },
         tooltip: {
           trigger: "axis",
@@ -305,19 +359,31 @@ export default {
           {
             left: "10%",
             right: "8%",
-            height: "40%",
+            height: "30%",
           },
           {
             left: "10%",
             right: "8%",
-            top: "50%",
+            top: "30%",
+            height: "10%",
+          },
+          {
+            left: "10%",
+            right: "8%",
+            top: "60%", //MACD 指标
             height: "20%",
           },
           {
             left: "10%",
             right: "8%",
-            top: "70%", //MACD 指标
-            height: "30%",
+            top: "40%",
+            height: "10%",
+          },
+          {
+            left: "10%",
+            right: "8%",
+            top: "50%",
+            height: "10%",
           },
         ],
         xAxis: [
@@ -352,13 +418,47 @@ export default {
           {
             //幅图
             type: "category",
-            boundaryGap: false,
-            splitNumber: 20,
             gridIndex: 2,
             data: data.times,
-            axisLabel: {
-              show: false,
-            },
+            boundaryGap: false,
+            scale: true,
+            splitNumber: 20,
+            axisLine: { onZero: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            min: "dataMin",
+            max: "dataMax",
+          },
+          {
+            //幅图
+            type: "category",
+            gridIndex: 3,
+            data: data.times,
+            boundaryGap: false,
+            scale: true,
+            splitNumber: 20,
+            axisLine: { onZero: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            min: "dataMin",
+            max: "dataMax",
+          },
+          {
+            //幅图
+            type: "category",
+            gridIndex: 4,
+            data: data.times,
+            boundaryGap: false,
+            scale: true,
+            splitNumber: 20,
+            axisLine: { onZero: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            min: "dataMin",
+            max: "dataMax",
           },
         ],
         yAxis: [
@@ -398,17 +498,59 @@ export default {
               fontSize: 8,
             },
           },
+          {
+            //幅图RSI
+            z: 4,
+            gridIndex: 3,
+            splitNumber: 4,
+            axisLine: {
+              onZero: false,
+            },
+            axisTick: {
+              show: false,
+            },
+            splitLine: {
+              show: false,
+            },
+            axisLabel: {
+              //label文字设置
+              color: "#c7c7c7",
+              inside: true, //label文字朝内对齐
+              fontSize: 8,
+            },
+          },
+          {
+            //幅图KDJ
+            z: 4,
+            gridIndex: 4,
+            splitNumber: 4,
+            axisLine: {
+              onZero: false,
+            },
+            axisTick: {
+              show: false,
+            },
+            splitLine: {
+              show: false,
+            },
+            axisLabel: {
+              //label文字设置
+              color: "#c7c7c7",
+              inside: true, //label文字朝内对齐
+              fontSize: 8,
+            },
+          },
         ],
         dataZoom: [
           {
             type: "inside",
-            xAxisIndex: [0, 1, 2],
+            xAxisIndex: [0, 1, 2, 3, 4],
             start: 50,
             end: 100,
           },
           {
             show: true,
-            xAxisIndex: [0, 1, 2],
+            xAxisIndex: [0, 1, 2, 3, 4],
             type: "slider",
             top: "85%",
             start: 50,
@@ -425,6 +567,21 @@ export default {
               color0: this.downColor,
               borderColor: null,
               borderColor0: null,
+            },
+            markPoint: {
+              label: {
+                normal: {
+                  formatter: function (param) {
+                    return param != null ? param.value : "";
+                  },
+                },
+              },
+              data: markData,
+              tooltip: {
+                formatter: function (param) {
+                  return param.name + "<br>" + (param.data.coord || "");
+                },
+              },
             },
             tooltip: {
               formatter: function (param) {
@@ -444,8 +601,9 @@ export default {
             type: "line",
             data: this.calculateMA(5, data),
             smooth: true,
+            showSymbol: false,
             lineStyle: {
-              opacity: 0.5,
+              opacity: 0,
             },
           },
           {
@@ -453,8 +611,9 @@ export default {
             type: "line",
             data: this.calculateMA(10, data),
             smooth: true,
+            showSymbol: false,
             lineStyle: {
-              opacity: 0.5,
+              opacity: 0,
             },
           },
           {
@@ -462,8 +621,9 @@ export default {
             type: "line",
             data: this.calculateMA(20, data),
             smooth: true,
+            showSymbol: false,
             lineStyle: {
-              opacity: 0.5,
+              opacity: 0,
             },
           },
           {
@@ -471,8 +631,9 @@ export default {
             type: "line",
             data: this.calculateMA(30, data),
             smooth: true,
+            showSymbol: false,
             lineStyle: {
-              opacity: 0.5,
+              opacity: 0,
             },
           },
           {
@@ -531,6 +692,54 @@ export default {
                 width: 1,
               },
             },
+          },
+          {
+            name: "RSI1",
+            type: "line",
+            symbol: "none",
+            xAxisIndex: 3,
+            yAxisIndex: 3,
+            data: rsi1,
+          },
+          {
+            name: "RSI2",
+            type: "line",
+            symbol: "none",
+            xAxisIndex: 3,
+            yAxisIndex: 3,
+            data: rsi2,
+          },
+          {
+            name: "RSI3",
+            type: "line",
+            symbol: "none",
+            xAxisIndex: 3,
+            yAxisIndex: 3,
+            data: rsi3,
+          },
+          {
+            name: "K",
+            type: "line",
+            symbol: "none",
+            xAxisIndex: 4,
+            yAxisIndex: 4,
+            data: k,
+          },
+          {
+            name: "D",
+            type: "line",
+            symbol: "none",
+            xAxisIndex: 4,
+            yAxisIndex: 4,
+            data: d,
+          },
+          {
+            name: "J",
+            type: "line",
+            symbol: "none",
+            xAxisIndex: 4,
+            yAxisIndex: 4,
+            data: j,
           },
         ],
       };
@@ -597,70 +806,6 @@ export default {
         values: values,
         volumes: volumes,
       };
-    },
-    calcMACD(short, long, mid, data, field) {
-      var i, l, dif, dea, macd, result;
-      result = {};
-      macd = [];
-      dif = this.calcDIF(short, long, data, field);
-      dea = this.calcDEA(mid, dif);
-      for (i = 0, l = data.length; i < l; i++) {
-        macd.push(((dif[i] - dea[i]) * 2).toFixed(3));
-      }
-      result.dif = dif;
-      result.dea = dea;
-      result.macd = macd;
-      return result;
-    },
-    /*
-     * 计算EMA指数平滑移动平均线，用于MACD
-     * @param {number} n 时间窗口
-     * @param {array} data 输入数据
-     * @param {string} field 计算字段配置
-     */ calcEMA(n, data, field) {
-      var i, l, ema, a;
-      a = 2 / (n + 1);
-      if (field) {
-        //二维数组
-        ema = [data[0][field]];
-        for (i = 1, l = data.length; i < l; i++) {
-          ema.push((a * data[i][field] + (1 - a) * ema[i - 1]).toFixed(2));
-        }
-      } else {
-        //普通一维数组
-        ema = [data[0]];
-        for (i = 1, l = data.length; i < l; i++) {
-          ema.push((a * data[i] + (1 - a) * ema[i - 1]).toFixed(3));
-        }
-      }
-      return ema;
-    },
-
-    /*
-     * 计算DIF快线，用于MACD
-     * @param {number} short 快速EMA时间窗口
-     * @param {number} long 慢速EMA时间窗口
-     * @param {array} data 输入数据
-     * @param {string} field 计算字段配置
-     */
-    calcDIF(short, long, data, field) {
-      var i, l, dif, emaShort, emaLong;
-      dif = [];
-      emaShort = this.calcEMA(short, data, field);
-      emaLong = this.calcEMA(long, data, field);
-      for (i = 0, l = data.length; i < l; i++) {
-        dif.push((emaShort[i] - emaLong[i]).toFixed(3));
-      }
-      return dif;
-    },
-
-    /*
-     * 计算DEA慢线，用于MACD
-     * @param {number} mid 对dif的时间窗口
-     * @param {array} dif 输入数据
-     */
-    calcDEA(mid, dif) {
-      return this.calcEMA(mid, dif);
     },
   },
 };
